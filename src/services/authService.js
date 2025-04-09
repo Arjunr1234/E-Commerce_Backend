@@ -12,13 +12,12 @@ export const loginService = async(email, password) => {
           }
          const response = await loginRepo(email, password);
 
-         const accessToken = generateToken({ ...response }, '15m');  
-         const refreshToken = generateToken({ ...response }, '15d');  
+         
+         const adminToken = generateToken({ ...response }, '15d');  
 
          return {
             success:true,
-            accessToken,
-            refreshToken,
+            adminToken,
             ...response
          }
 
