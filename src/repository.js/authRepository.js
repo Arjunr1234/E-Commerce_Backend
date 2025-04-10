@@ -28,7 +28,6 @@ export const loginRepo = async (email, password) => {
       email: admin.email,
     };
   } catch (error) {
-    console.log("fet: errror in loginRepo: ", error);
     throw new ErrorService(error.message, error.statusCode);
   }
 };

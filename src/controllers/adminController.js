@@ -18,6 +18,7 @@ export const revenueData = async (req, res, next) => {
       totalRevenue: response.totalRevenue,
       totalCustomers: response.totalCustomers,
       monthlyRevenue: response.monthlyRevenue,
+      weekelyRevenue: response.weeklyData,
     });
   } catch (error) {
     next(error);
@@ -26,11 +27,16 @@ export const revenueData = async (req, res, next) => {
 
 export const customerData = async (req, res, next) => {
   try {
+    console.log("Thsi is req.querY: ", req.query);
     const response = await customerDataService();
 
     return res
       .status(HttpStatusCode.OK)
-      .json({ success: true, customers: response.customers });
+      .json({
+        success: true,
+        customers: response.customers,
+        customerLocation: response.customerLocation,
+      });
   } catch (error) {
     next(error);
   }
@@ -50,12 +56,22 @@ export const productData = async (req, res, next) => {
 
 export const orderData = async (req, res, next) => {
   try {
-    const response = await orderDataService();
+    const { page, limit, search, status } = req.query;
+
+    const data = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search,
+      status,
+    };
+
+    const response = await orderDataService(data);
     return res.status(HttpStatusCode.OK).json({
       success: true,
       bestCategory: response.bestCategory,
       orderStatus: response.orderStatus,
       orders: response.orders,
+      totalOrders: response.totalOrders,
     });
   } catch (error) {
     next(error);
@@ -64,7 +80,9 @@ export const orderData = async (req, res, next) => {
 
 export const reportData = async (req, res, next) => {
   try {
-    const response = await reportDataService();
+    const { startDate, endDate } = req.query;
+
+    const response = await reportDataService(startDate, endDate);
 
     return res.status(HttpStatusCode.OK).json({
       success: true,

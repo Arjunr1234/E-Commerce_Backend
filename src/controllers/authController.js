@@ -31,7 +31,7 @@ export const login = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    console.log("Ented in to logot controller")
+    console.log("Ented in to logot controller");
 
     res.clearCookie("adminToken", {
       httpOnly: true,

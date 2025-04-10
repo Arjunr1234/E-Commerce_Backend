@@ -66,7 +66,15 @@ export const revenueDataRepo = async () => {
 
     const totalRevenue = total[0].totalRevenue;
 
-    return { success: true, monthlyRevenue, totalRevenue, totalCustomers };
+    const orders = await orderModel.find({});
+
+    return {
+      success: true,
+      monthlyRevenue,
+      totalRevenue,
+      totalCustomers,
+      orders,
+    };
   } catch (error) {
     throw new ErrorService(error.message, error.statusCode);
   }
@@ -76,16 +84,12 @@ export const customerDataRepo = async () => {
   try {
     const customersData = await customerModel.find({}).lean();
 
-    const customers = customersData.map((customer) => ({
-      _id: customer._id.toString(),
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-      location: customer.location,
-      totalSpent: customer.totalSpent,
-    }));
+    const customerLocation = await customerModel.find(
+      {},
+      { name: 1, location: 1 }
+    );
 
-    return { customers };
+    return { customers: customersData, customerLocation };
   } catch (error) {
     throw new ErrorService(error.message, error.statusCode);
   }
@@ -112,7 +116,10 @@ export const productDataRepo = async () => {
   }
 };
 
-export const orderDataRepo = async () => {
+export const orderDataRepo = async (data) => {
+  const { page, limit, search, status } = data;
+
+  console.log({ page, limit, search, status });
   try {
     const orderStatus = await orderModel.aggregate([
       {
@@ -146,6 +153,14 @@ export const orderDataRepo = async () => {
       },
     ]);
 
+    const matchConditions = {};
+    if (search) {
+      matchConditions.customerName = { $regex: search, $options: "i" };
+    }
+    if (status) {
+      matchConditions.status = status;
+    }
+
     const orderData = await orderModel.aggregate([
       {
         $addFields: {
@@ -172,122 +187,142 @@ export const orderDataRepo = async () => {
           totalAmount: 1,
         },
       },
+      {
+        $match: matchConditions,
+      },
+      {
+        $skip: (page - 1) * limit,
+      },
+      {
+        $limit: limit,
+      },
     ]);
 
-    return { bestCategory, orderStatus, orders: orderData };
+    const totalOrders = await orderModel.countDocuments();
+
+    
+    return { bestCategory, orderStatus, orders: orderData, totalOrders };
   } catch (error) {
     throw new ErrorService(error.message, error.statusCode);
-      
   }
 };
 
-export const reportDataRepo = async () => {
+export const reportDataRepo = async (startDate, endDate) => {
   try {
-     
+    const matchStage = {
+      status: "Completed",
+    };
+
+    if (startDate && endDate) {
+      matchStage.$expr = {
+        $and: [
+          { $gte: [{ $toDate: "$createdAt" }, new Date(startDate)] },
+          { $lte: [{ $toDate: "$createdAt" }, new Date(endDate)] },
+        ],
+      };
+    } else if (!startDate && endDate) {
+      matchStage.$expr = {
+        $lt: [{ $toDate: "$createdAt" }, new Date(endDate)],
+      };
+    }
+
     const reportData = await orderModel.aggregate([
-          {
-            $match:{status:"Completed"}
-          },
-          {
-             $unwind:"$products"
-          },
-          {
-            $addFields: {
-              "products.productId": { $toObjectId: "$products.productId" }
-            }
-          },
-          {
-            $lookup: {
-              from: "products",
-              localField: "products.productId",
-              foreignField: "_id",
-              as: "product"
-            }
-          },
-          {
-            $unwind:"$product"
-          },
-          {
-            $addFields:{
-                userId:{$toObjectId:"$userId"}
-            }
-          },
-          {
-            $lookup:{
-                from:"customers",
-                localField:"userId",
-                foreignField:"_id",
-                as:"customer"
-            }
-          },
-          {
-            $unwind:"$customer"
-          },
-          {
-            $project: {
-              _id: { $toString: "$_id" },
-              "quantity": "$products.quantity",
-              "productName": "$product.name",
-              "productPrice": "$product.price",
-              "customerName": "$customer.name",
-              createdAt: 1
-            }
-          }
+      {
+        $match: matchStage,
+      },
+      {
+        $unwind: "$products",
+      },
+      {
+        $addFields: {
+          "products.productId": { $toObjectId: "$products.productId" },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      {
+        $unwind: "$product",
+      },
+      {
+        $addFields: {
+          userId: { $toObjectId: "$userId" },
+        },
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "userId",
+          foreignField: "_id",
+          as: "customer",
+        },
+      },
+      {
+        $unwind: "$customer",
+      },
+      {
+        $project: {
+          _id: { $toString: "$_id" },
+          quantity: "$products.quantity",
+          productName: "$product.name",
+          productPrice: "$product.price",
+          customerName: "$customer.name",
+          createdAt: 1,
+        },
+      },
+    ]);
 
-      ]);
-
-      return {reportData}
-      
-      
+    return { reportData };
   } catch (error) {
     throw new ErrorService(error.message, error.statusCode);
   }
 };
 
+export const orderDetaisRepo = async (orderId) => {
+  try {
+    const convertedOrderId = new mongoose.Types.ObjectId(orderId);
 
-export const orderDetaisRepo = async(orderId) => {
-    try {
+    const order = await orderModel.aggregate([
+      {
+        $match: { _id: convertedOrderId },
+      },
+      {
+        $unwind: "$products",
+      },
+      {
+        $addFields: {
+          "products.productId": { $toObjectId: "$products.productId" },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      {
+        $unwind: "$product",
+      },
+      {
+        $project: {
+          _id: { $toString: "$_id" },
+          productName: "$product.name",
+          price: "$product.price",
+          quantity: "$products.quantity",
+          createAt: 1,
+        },
+      },
+    ]);
 
-        const convertedOrderId = new mongoose.Types.ObjectId(orderId);
-        console.log("convertedOrderId: ", convertedOrderId)
-        const order = await orderModel.aggregate([
-            {
-             $match:{_id:convertedOrderId}
-            },
-            {
-                $unwind:"$products"
-             },
-             {
-                $addFields: {
-                  "products.productId": { $toObjectId: "$products.productId" }
-                }
-              },
-              {
-                $lookup: {
-                  from: "products",
-                  localField: "products.productId",
-                  foreignField: "_id",
-                  as: "product"
-                }
-              },
-              {
-                $unwind:"$product"
-              },
-             {
-              $project:{
-                _id:{$toString:"$_id"},
-                "productName":"$product.name",
-                "price":"$product.price",
-                "quantity":"$products.quantity",
-                createAt:1
-              }
-             }
-        ])
-
-       return {order}
-
-        
-    } catch (error) {
-        throw new ErrorService(error.message, error.statusCode);
-    }
-}
+    return { order };
+  } catch (error) {
+    throw new ErrorService(error.message, error.statusCode);
+  }
+};

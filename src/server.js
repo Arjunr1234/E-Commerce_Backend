@@ -30,6 +30,7 @@ app.use("/api/auth", authRoute);
 app.use('/api/analytics',adminRoute)
 
 
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
