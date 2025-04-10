@@ -43,51 +43,42 @@ src/
 
 ## ⚙️ Installation & Setup
 
+
+
+## Installation & Setup
 ### **Prerequisites**
-Make sure you have installed:
+Ensure you have the following installed:
 - [Node.js](https://nodejs.org/)
 - [MongoDB](https://www.mongodb.com/)
 - [npm](https://www.npmjs.com/)
 
-### **Steps to Run the Backend**
+### **Installation Steps**
 
 1. **Clone the repository**
    ```bash
    git clone https://github.com/Arjunr1234/E-Commerce_Backend.git
    cd ecommerce-admin-panel/backend
 
-
-2. **Install dependencies**
-    ```bash
-npm install
-
-
-
-3. ***Create a .env file in the root of the backend directory and add the following:**
-
-
-
-MONGO_URI=your_mongodb_connection_string
+   ```
+ **Install dependencies:**
+   ```sh
+   npm install
+   ```
+   . **Create a `.env` file in the root  add the following:**
+   ```ini
+MOGO_URL = mongodb://localhost:27017/ecommmerce
 PORT=5000
-NODE_ENV=development
-JWT_SECRET=your_jwt_secret_key
-ORIGIN=http://localhost:5173
-
-
-4. ***Run the development server***
-
-
-npm run dev
-The backend will be running at: http://localhost:5000
+ORGIN= http://localhost:5173
+ACCESSTOKENKEY = " secret key"
+   ```
 
 
 
-
-
-
-
-
-
+    **Run the development server:**
+   ```sh
+   npm start
+   ```
+ The backend will be running at `http://localhost:5000` (or your configured port).
 
 
 
